@@ -1,3 +1,5 @@
+#this is the palybook for creating a user and adding permissions 
+
 ---
 - name: Create a user and set permissions
   hosts: all
