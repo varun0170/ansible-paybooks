@@ -1,0 +1,12 @@
+---
+- name: Installing git on the target servers 
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install git
+      apt:
+        name: git
+        state: present
+    - name: Initialize Git repository
+      command: git init
+
