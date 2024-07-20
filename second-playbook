@@ -1,0 +1,17 @@
+---
+- name: Create a user and set permissions
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create a new user
+      user:
+        name: varun
+        state: present
+
+    - name: Create a directory for the user
+      file:
+        path: /home/varun/app
+        state: directory
+        owner: varun
+        group: varun
+        mode: '777'
