@@ -1,3 +1,5 @@
+#this playbook will install the git on target machines and initialize Git repository on the target machines
+ 
 ---
 - name: Installing git on the target servers 
   hosts: all
