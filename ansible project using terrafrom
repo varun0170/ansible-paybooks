@@ -1,0 +1,97 @@
+# Configure the AWS provider
+provider "aws" {
+  region = "eu-west-2" # London Region - IMPORTANT: Change this to your desired AWS region
+}
+
+# --- Data Sources (to get existing resources) ---
+# It's good practice to fetch existing resources via data sources
+# rather than hardcoding their IDs if they are managed externally.
+
+data "aws_vpc" "default" {
+  # Replace with your VPC ID, or comment out if you want to use the default VPC (not recommended for production)
+  # filter {
+  #   name   = "isDefault"
+  #   values = ["true"]
+  # }
+  id = "vpc-0abcdef1234567890" # <-- REPLACE WITH YOUR VPC ID
+}
+
+data "aws_subnet" "public_subnet" {
+  # Replace with your Subnet ID
+  # Ensure this is a public subnet if you need direct internet access
+  id = "subnet-0abcdef1234567890" # <-- REPLACE WITH YOUR SUBNET ID
+  vpc_id = data.aws_vpc.default.id
+}
+
+data "aws_security_group" "ssh_http_sg" {
+  # Replace with your Security Group ID that allows SSH (Port 22) and potentially HTTP/HTTPS
+  # Make sure this SG allows inbound traffic on port 22 from your IP for SSH access
+  id = "sg-0abcdef1234567890" # <-- REPLACE WITH YOUR SECURITY GROUP ID
+  vpc_id = data.aws_vpc.default.id
+}
+
+# --- Resource Definition ---
+
+# This resource block defines the EC2 instance(s)
+resource "aws_instance" "my_app_server" {
+  # The 'count' meta-argument tells Terraform to create 50 instances of this resource
+  count = 50 # <-- This will provision 50 identical EC2 instances
+
+  # Amazon Machine Image (AMI) ID
+  # This AMI ID is for Amazon Linux 2 in eu-west-2 (London)
+  # IMPORTANT: Find the correct AMI for your chosen 'region' (e.g., from AWS console -> EC2 -> AMIs)
+  ami = "ami-0ed9277d34b4c65e8" # <-- VERIFY/REPLACE WITH A VALID AMI ID FOR YOUR REGION
+
+  # Instance type (size) - t2.micro is Free Tier eligible
+  # IMPORTANT: For 50 instances, t2.micro might be too small for real applications
+  instance_type = "t2.micro"
+
+  # The name of your SSH Key Pair in AWS
+  # You need the corresponding .pem file on your local machine to connect
+  key_name = "my-ec2-keypair" # <-- REPLACE WITH YOUR EC2 KEY PAIR NAME
+
+  # Associate with a public IP address (needed to connect from the internet)
+  associate_public_ip_address = true # Requires the subnet to be public
+
+  # Place instances in the specified subnet
+  subnet_id = data.aws_subnet.public_subnet.id
+
+  # Attach the security group(s)
+  vpc_security_group_ids = [data.aws_security_group.ssh_http_sg.id]
+
+  # User data script to run when the instance first starts
+  # This example installs Nginx and starts it.
+  user_data = <<-EOF
+              #!/bin/bash
+              yum update -y
+              yum install -y nginx
+              systemctl start nginx
+              systemctl enable nginx
+              echo "<h1>Hello from EC2 Instance ${count.index}</h1>" > /usr/share/nginx/html/index.html
+              EOF
+
+  # Tags for organization and identification
+  tags = {
+    Name        = "MyAppServer-${count.index}" # Unique name for each instance (0 to 49)
+    Project     = "MyAwesomeApp"
+    Environment = "Dev"
+    ManagedBy   = "Terraform"
+  }
+}
+
+# --- Outputs (to easily get information about deployed resources) ---
+
+output "instance_public_ips" {
+  description = "Public IP addresses of the provisioned EC2 instances"
+  value       = aws_instance.my_app_server[*].public_ip # Using [*] to get a list of all IPs
+}
+
+output "instance_public_dns" {
+  description = "Public DNS names of the provisioned EC2 instances"
+  value       = aws_instance.my_app_server[*].public_dns
+}
+
+output "instance_ids" {
+  description = "IDs of the provisioned EC2 instances"
+  value       = aws_instance.my_app_server[*].id
+}
