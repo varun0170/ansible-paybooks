@@ -54,3 +54,28 @@ hostnames:
       service:
         name: nginx
         state: restarted
+
+####step3: ##htmlfile#
+<html>
+  <head><title>Welcome</title></head>
+  <body>
+    <h1>Hello from {{ inventory_hostname }}</h1>
+    <p>Running on port {{ web_port }}</p>
+  </body>
+</html>
+
+####step4 #####vars/main.yml — Variables#####
+web_package: nginx
+web_port: 80
+
+
+####step5 secrets/vault.yml####
+ansible-vault create secrets/vault.yml
+
+aws_access_key: aws accout accesskey 
+aws_secret_key: aws accout secretkey
+
+final step Run the Playbook
+ansible-playbook playbook.yml --ask-vault-pass
+
+
